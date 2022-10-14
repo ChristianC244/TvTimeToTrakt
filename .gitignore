@@ -3,5 +3,9 @@
 
 # VS Code
 
+# Python junk
+**/__pycache__
+
 # Private
 config.json
+app.log
