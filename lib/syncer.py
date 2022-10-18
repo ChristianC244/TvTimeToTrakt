@@ -20,14 +20,14 @@ class Syncer:
         """
         logging.info(f"Syncer started in testing mode: {test}")
         
-        self.WAIT_TIME = 1 # Time to wait between calls
+        # self.WAIT_TIME = 1 # Time to wait between calls
         self.client_id = ""
         self.client_secret = ""
         self.token_info = Token_info()
         self.PATH = str(pathlib.Path(__file__).parent.resolve()) + "/../"
 
         self.api_endpoint = "https://api.trakt.tv/"
-        if test: self.api_endpoint = "https://private-anon-cc624c6abf-trakt.apiary-mock.com"
+        if test: self.api_endpoint = "https://api-staging.trakt.tv"
 
         self.__read_config()
 
@@ -58,7 +58,9 @@ class Syncer:
             if expire_date - now >= 24*60*60:
                 logging.info(f"Skipping authentication, valid token expires at {datetime.fromtimestamp(expire_date)}")
                 return
-
+            else:
+                #TODO Call for a token refresh
+                None
 
         (device_code, interval, expires_in) = self.__get_code()
         now = 0
@@ -113,6 +115,38 @@ class Syncer:
             exit("There was an Error during authentication #GET-TOKEN-ERROR-{}\nRetry Later!".format(resp.status_code))
 
         return (True, resp.json())
+# ---------------------------------------------- REAL STUFF ----------------------------------------------------
+
+    def add_to_history(self, data: dict):
+        """
+        It adds a dictionary of films/episodes to the history, returns the status code of the request:
+        201 if successful, otherwise it didn't succeded
+
+        Params
+        --------------
+        data : dict
+            a dictionary with the tv shows episodes or movies to add to trakt history
+        """
+        url = self.api_endpoint + "/sync/history"
+        header = {
+            "Content-Type": "application/json",
+            "Authorization": f"{self.token_info.token_type} {self.token_info.access_token}",
+            "trakt-api-version": "2",
+            "trakt-api-key": f"{self.client_id}"
+        }
+
+        resp = requests.post(url= url, headers= header, json= data)
+        logging.debug(f"Status: {resp.status_code}, Content: {resp.json()}")
+
+        return (resp, resp.json())
+    
+    def add_ratings(self):
+        #TODO
+        None
+
+    def add_to_watchlist(self):
+        #TODO
+        None
 
 # ---------------------------------------------- UTILS ----------------------------------------------------
     def __read_config(self):
@@ -123,11 +157,11 @@ class Syncer:
                 "client_id": "INSERT ID",
                 "client_secret": "INSERT SECRET"
             }
-            with open(self.PATH + "config.json", "w") as file: #TODO fix absolute path
+            with open(self.PATH + "config.json", "w") as file:
                 json.dump(config, file)
 
 
-        with open(self.PATH + "config.json") as file: #TODO fix absolute path
+        with open(self.PATH + "config.json") as file: 
             jdump = json.load(file)
             self.client_id = jdump["client_id"]
             self.client_secret = jdump["client_secret"]
@@ -145,7 +179,7 @@ class Syncer:
             "token_info": self.token_info.to_dict()
         }
 
-        with open(self.PATH + "config.json", "w") as file: #TODO fix absolute path
+        with open(self.PATH + "config.json", "w") as file:
             json.dump(data, file, indent=4)
         
         logging.debug("'config.json saved'")

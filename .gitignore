@@ -9,3 +9,5 @@
 # Private
 config.json
 app.log
+data/**
+history.json
