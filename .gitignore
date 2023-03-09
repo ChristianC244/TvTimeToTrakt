@@ -11,3 +11,7 @@ config.json
 app.log
 data/**
 history.json
+
+# Added by cargo
+
+/target
