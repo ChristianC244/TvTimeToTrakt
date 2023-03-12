@@ -12,7 +12,7 @@ use std::sync::mpsc::SyncSender;
 /// * `filepath` - A String with the correct path of seen_episode.csv
 /// * `tx` - The sender from which sends the episodes read for a multithreaded operation
 ///
-pub fn read_episodes(filepath: String, tx: SyncSender<Episode>) -> Result<usize> {
+pub fn read_episodes(filepath: &str, tx: SyncSender<Episode>) -> Result<usize> {
     let file = File::open(filepath)?;
 
     let mut reader = csv::Reader::from_reader(file);
