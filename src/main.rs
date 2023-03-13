@@ -3,7 +3,7 @@ use std::fs::File;
 use std::os::unix::prelude::FileExt;
 use std::path::Path;
 use std::sync::mpsc::sync_channel;
-use std::{env, thread};
+use std::{env, io, thread};
 
 use tv_time_to_trakt::file_reader;
 
@@ -23,7 +23,7 @@ fn main() {
             Err(e) => println!("Error while reading episodes: {:?}", e),
         });
 
-    check_setup(&working_directory);
+    let credentials = check_setup(&working_directory);
 
     while let Ok(episode) = rx.recv() {
         // println!("{:?}", episode);
@@ -37,16 +37,16 @@ fn main() {
     println!("Send json to trakt");
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 struct Config {
     client_id: String,
     client_secret: String,
 }
 impl Config {
-    fn new() -> Config {
+    fn new(client_id: String, client_secret: String) -> Config {
         Config {
-            client_id: String::new(),
-            client_secret: String::new(),
+            client_id,
+            client_secret,
         }
     }
 }
@@ -56,19 +56,35 @@ impl Config {
 /// # Arguments
 ///
 /// + wd - A string with the path of the working directory
-fn check_setup(wd: &str) {
+fn check_setup(wd: &str) -> Config {
     let config_file_path = String::from(wd) + "/config.json";
     let config_file = Path::new(&config_file_path);
+    let config: Config;
     if config_file.exists() {
-        todo!("Read parameters and store to struct config")
+        let file = File::open(&config_file_path).unwrap();
+        config = serde_json::from_reader(file).unwrap();
     } else {
-        println!("File config.json does not exists, creating one now.. ");
-        let new_config = Config::new();
-        let j = serde_json::to_vec(&new_config).unwrap();
+        // Asking the user to provide the credentials
+
+        //id
+        println!("Please write the client id [then press Enter]");
+        let mut credentials = String::new();
+        io::stdin().read_line(&mut credentials).unwrap();
+
+        // secret
+        println!("Please write the client secret [then press Enter]");
+        io::stdin().read_line(&mut credentials).unwrap();
+
+        let credentials = credentials.split("\n").collect::<Vec<&str>>();
+        config = Config::new(credentials[0].to_string(), credentials[1].to_string());
+        drop(credentials);
+
+        let j = serde_json::to_vec(&config).unwrap();
         let file = File::create("config.json").expect("Couldn't create file");
         file.write_all_at(&j, 0)
             .expect("Couldn't rite in config.json");
     }
+    config
 }
 
 #[cfg(test)]
